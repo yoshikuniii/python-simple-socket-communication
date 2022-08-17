@@ -29,7 +29,7 @@ class client(Thread):
 				client_message = self.sock.recv(1024).decode()
 				if client_message == "exit()" or client_message == "bye()":
 					print("End Session. Exiting...")
-					self.sock.send(b"\nGoodbye...\n")
+					self.sock.send(b"Server : Goodbye...")
 					self.sock.close()
 					break
 				else:
