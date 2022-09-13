@@ -1,5 +1,5 @@
 import socket
-from threading import *
+import threading
 
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 host_ip = ""
@@ -15,37 +15,52 @@ print("=> Host IP:\t", host_ip)
 print("=> Port:\t\t", host_port)
 
 server_socket.bind((host_ip, host_port))
+server_socket.listen()
 
-class client(Thread):
-	def __init__(self, socket, address):
-		Thread.__init__(self)
-		self.sock = socket
-		self.addr = address
-		self.start()
+# list connected clients dan nickname mereka
+clients = []
+nicknames = []
 
-	def run(self):
-		while True:
-			try:
-				client_message = self.sock.recv(1024).decode()
-				if client_message == "exit()" or client_message == "bye()":
-					print("End Session. Exiting...")
-					self.sock.send(b"Server : Goodbye...")
-					self.sock.close()
-					break
-				else:
-					print("Client {} say : {}".format(self.addr, client_message))
-					self.sock.send(b"Server : Message Recieved!") # tell client that the message has been recieved
-				
-			except Exception as e:
-				print(e)
-				self.sock.close()
-				print("[!] Error Occured. Closing Server...")
-				break
+# broadcast message ke connected client
+def broadcast(message):
+	for client in clients:
+		client.send(message)
 
-server_socket.listen(5)
-print("Server started!")
-while True:
-	clientsocket, address = server_socket.accept()
-	client(clientsocket, address)
-	break
 
+# function untuk terima message dari client lalu broadcast messagenya
+# maksudnya, terima dari client A, lalu broadcast ke client lain
+def handle(client):
+	while True:
+		try:
+			message = client.recv(1024)
+			broadcast(message)
+		except:
+			index = clients.index(client)
+			clients.remove(client)
+			client.close()
+			nickname = nicknames[index]
+			broadcast(f'[Server] {nickname} left the chat.'.encode())
+			nicknames.remove(nickname)
+			break
+
+
+def reviece():
+	while True:
+		client, address = server_socket.accept()
+		print(f'[!] A client connected with {str(address)}')
+
+		# tanya nickname dari client yang barusan connected
+		client.send("WHO".encode()) # WHO ARE YOU?
+		nickname = client.recv(1024).decode() # nickname user
+
+		nicknames.append(nickname)
+		clients.append(client)
+
+		print(f'=> Nickname: {nickname}')
+		broadcast(f'[Server] {nickname} has joined the chat!'.encode())
+		client.send('[Server] you are connected to server! Happy chatting.'.encode()) # feedback kalo user udah connected ke server
+
+		thread = threading.Thread(target=handle, args=(client,))
+		thread.start()
+
+reviece()

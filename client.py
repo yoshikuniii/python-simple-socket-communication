@@ -1,16 +1,19 @@
 import socket
-from time import sleep
+import threading
+from os import system
 
 client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server_ip = ""
 server_port = 0
 
+# Input detail server
 print("[!] Enter server details.")
 server_ip = input("Server IP Address : ")
 server_port = int(input("Port: "))
 
 print("[~] Connecting to {}...".format(server_ip))
 
+# Connect ke server
 try:
 	client_socket.connect((server_ip, server_port))
 except Exception as e:
@@ -20,27 +23,53 @@ except Exception as e:
 else:
 	print("[!] Connected to {} on port {}.".format(server_ip, server_port))
 
-def send(message: str):
-	client_socket.send(message.encode())
-	recieved_data_from_server = client_socket.recv(1024).decode()
-	print(recieved_data_from_server)
 
-def main():
+# user memasukan nickname
+nickname = input("Choose your nickname: ")
+
+stop_thread = False
+
+def recieve():
 	while True:
+		global stop_thread
+		if stop_thread:
+			break
 		try:
-			input_message = input('Enter Message : ')
-			if input_message=="exit()" or  input_message=="bye()":
-				send(str(input_message))
-				print("[!] Closing...")
-				sleep(3)
-				break
+			# terima pesan
+			message = client_socket.recv(1024).decode()
+			
+			# server menanyakan nickname user
+			# ini hanya dilakukan sekali saat baru konek
+			if message == "WHO": 
+				client_socket.send(nickname.encode())
 			else:
-				send(str(input_message))
-		except Exception as e:
-			print(e)
+				print(message)
+		except:
 			client_socket.close()
+			system('cls') # clear the error message hehe
 			break
 
-if __name__ == "__main__":
-	print("Type 'exit()' or 'bye()' to end the session.")
-	main()
+def send():
+	while True:
+		global stop_thread
+		if stop_thread:
+			break
+
+		# tulis message baru
+		message = f'{nickname}: {input("")}'
+
+		if message[len(nickname)+2:].startswith('/bye'):
+			# client_socket.send(f"[!] Client {nickname} disconnected!".encode())
+			client_socket.close()
+			system('cls')
+			stop_thread = True
+
+
+		client_socket.send(message.encode())
+
+print("[!] Type '/bye' to end the session.")
+
+recieve_thread = threading.Thread(target=recieve)
+send_thread = threading.Thread(target=send)
+recieve_thread.start()
+send_thread.start()
