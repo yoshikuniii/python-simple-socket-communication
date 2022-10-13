@@ -9,7 +9,8 @@ server_port = 0
 
 print("[!] Enter server details.")
 server_ip = input("Server IP Address : ")
-server_port = int(input("Port: "))
+# server_port = int(input("Port: "))
+server_port = 6969
 
 print("[~] Connecting to {}...".format(server_ip))
 
